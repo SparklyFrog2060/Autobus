@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Przystanki - Timer Audio</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    input, button {
+      margin: 5px 0;
+      width: 100%;
+      padding: 8px;
+    }
+    .sound-item {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .sound-controls {
+      margin-top: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .sound-controls button,
+    .sound-controls input[type="range"] {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <h2>Dodaj dźwięk z timerem</h2>
+  <input type="file" accept="audio/*" id="audioFile">
+  <input type="number" id="audioTime" placeholder="Czas w sekundach">
+  <button onclick="addSound()">Dodaj</button>
+  <button onclick="startAll()">▶️ Włącz wszystkie</button>
+  <button onclick="stopAll()">⏸️ Zatrzymaj wszystkie</button>
+  <div class="sound-controls">
+    <button onclick="addTimeToAll(5)">+5s do wszystkich</button>
+    <button onclick="addTimeToAll(10)">+10s do wszystkich</button>
+    <button onclick="addTimeToAll(30)">+30s do wszystkich</button>
+  </div>
+  <div id="soundList"></div>
+
+  <script>
+    const sounds = [];
+    let running = false;
+
+    function addSound() {
+      const fileInput = document.getElementById('audioFile');
+      const timeInput = document.getElementById('audioTime');
+
+      if (!fileInput.files[0] || !timeInput.value) return alert('Wybierz plik i czas');
+
+      const file = URL.createObjectURL(fileInput.files[0]);
+      const time = parseInt(timeInput.value);
+      const audio = new Audio(file);
+
+      const sound = {
+        timeLeft: time,
+        interval: time,
+        audio: audio,
+        active: true
+      };
+
+      sounds.push(sound);
+      renderSounds();
+    }
+
+    function removeSound(index) {
+      sounds.splice(index, 1);
+      renderSounds();
+    }
+
+    function changeVolume(index, value) {
+      sounds[index].audio.volume = value;
+    }
+
+    function addTime(index, seconds) {
+      sounds[index].timeLeft += seconds;
+      renderSounds();
+    }
+
+    function addTimeToAll(seconds) {
+      sounds.forEach(s => s.timeLeft += seconds);
+      renderSounds();
+    }
+
+    function renderSounds() {
+      const list = document.getElementById('soundList');
+      list.innerHTML = '';
+      sounds.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'sound-item';
+        div.innerHTML = `
+          <strong>Dźwięk ${i + 1}</strong>: za <span id="timer-${i}">${s.timeLeft}</span> s
+          <div class="sound-controls">
+            <button onclick="addTime(${i}, 5)">+5s</button>
+            <button onclick="addTime(${i}, 10)">+10s</button>
+            <button onclick="addTime(${i}, 30)">+30s</button>
+            <input type="range" min="0" max="1" step="0.01" value="${s.audio.volume}" onchange="changeVolume(${i}, this.value)">
+            <button onclick="removeSound(${i})">Usuń</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function startAll() {
+      sounds.forEach(s => s.active = true);
+      running = true;
+    }
+
+    function stopAll() {
+      sounds.forEach(s => s.active = false);
+      running = false;
+    }
+
+    setInterval(() => {
+      if (!running) return;
+      sounds.forEach((s, i) => {
+        if (!s.active) return;
+        s.timeLeft--;
+        if (s.timeLeft <= 0) {
+          s.audio.play();
+          s.timeLeft = s.interval;
+        }
+        const timerEl = document.getElementById(`timer-${i}`);
+        if (timerEl) timerEl.textContent = s.timeLeft;
+      });
+    }, 1000);
+  </script>
+</body>
+</html>
