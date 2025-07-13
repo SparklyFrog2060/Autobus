@@ -11,7 +11,7 @@
       margin: auto;
       background: #f0f2f5;
     }
-    h1 {
+    h1, h2 {
       text-align: center;
     }
     button {
@@ -25,8 +25,9 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #0056b3;
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
     }
     .event-log {
       margin-top: 20px;
@@ -38,15 +39,21 @@
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
       font-size: 15px;
     }
+    #countdown {
+      font-size: 22px;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #333;
+    }
   </style>
 </head>
 <body>
   <h1>Linia O1 – Sterowanie trasą</h1>
+  <h2 id="countdown">Ładowanie...</h2>
   <button id="manualStartBtn">▶️ Uruchom trasę ręcznie</button>
   <div class="event-log" id="log"></div>
 
   <script>
-    // Harmonogram dźwięków i przystanków
     const SCHEDULE = [
       { time: 0,  audio: "1.mp3", label: "Start: Ocytko Taras", showToPassenger: true },
       { time: 17, audio: "2.mp3", label: "Przystanek: Ocytko Wyjazd", showToPassenger: true },
@@ -60,8 +67,17 @@
 
     const logBox = document.getElementById("log");
     const manualStartBtn = document.getElementById("manualStartBtn");
+    const countdownEl = document.getElementById("countdown");
     let started = false;
+    let intervalId = null;
+    let startTimeoutId = null;
+
     const channel = new BroadcastChannel("autobus-channel");
+    channel.onmessage = (event) => {
+      if (event.data.type === "STOP_REQUEST") {
+        log("🛑 Pasażer nacisnął STOP");
+      }
+    };
 
     function log(msg) {
       const time = new Date().toLocaleTimeString();
@@ -75,6 +91,7 @@
         return;
       }
       started = true;
+      manualStartBtn.disabled = true;
       log("🔁 Trasa rozpoczęta");
 
       SCHEDULE.forEach(event => {
@@ -83,7 +100,6 @@
           audio.play().catch(e => console.warn("Błąd odtwarzania audio:", e));
           log("▶️ " + event.label);
 
-          // Przekazujemy info pasażerom (w tym przykładzie lokalnie)
           localStorage.setItem("currentStop", JSON.stringify({
             label: event.label,
             time: event.time,
@@ -92,56 +108,57 @@
         }, event.time * 1000);
       });
 
-      // Po zakończeniu trasy (max czas to max event.time)
       const maxTime = Math.max(...SCHEDULE.map(e => e.time));
       setTimeout(() => {
         started = false;
+        manualStartBtn.disabled = false;
         log("✅ Trasa zakończona, czekamy na następny start");
+        scheduleAutoStart();
       }, (maxTime + 1) * 1000);
     }
 
-    // Obsługa stop od pasażera przez BroadcastChannel
-    channel.onmessage = (event) => {
-      if (event.data.type === "STOP_REQUEST") {
-        log("🛑 Pasażer nacisnął STOP");
-      }
-    };
-
-    // Obliczamy czas do najbliższego startu co 2 minuty
     function getNextStartDelay() {
       const now = new Date();
       const minutes = now.getMinutes();
       const seconds = now.getSeconds();
-
-      // Najbliższa minuta podzielna przez 2
-      const nextMinute = minutes + (2 - (minutes % 2));
+      const remainder = minutes % 2;
+      const nextMinute = minutes + (2 - remainder);
       const nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinute, 0, 0);
 
       let delay = nextStart - now;
-      if (delay < 0) delay += 2 * 60 * 1000; // jeśli minęliśmy tę minutę
+      if (delay < 0) delay += 2 * 60 * 1000;
 
       return delay;
     }
 
-    function scheduleAutoStart() {
+    function updateCountdown() {
+      const now = new Date();
       const delay = getNextStartDelay();
-      log(`⏳ Najbliższy start za ${Math.round(delay / 1000)} sekund`);
-
-      setTimeout(() => {
-        playSchedule();
-        // Ustawiamy kolejne starty co 2 minuty
-        setInterval(() => {
-          playSchedule();
-        }, 2 * 60 * 1000);
-      }, delay);
+      const secondsLeft = Math.floor(delay / 1000);
+      countdownEl.textContent = `⏳ Start trasy za: ${secondsLeft} s`;
     }
 
-    // Start ręczny przyciskiem
+    function scheduleAutoStart() {
+      updateCountdown();
+      let delay = getNextStartDelay();
+
+      if (startTimeoutId) clearTimeout(startTimeoutId);
+      if (intervalId) clearInterval(intervalId);
+
+      startTimeoutId = setTimeout(() => {
+        playSchedule();
+        // Odliczanie co sekundę
+        intervalId = setInterval(updateCountdown, 1000);
+      }, delay);
+
+      // Odliczaj co sekundę countdown od teraz do startu
+      if (!intervalId) intervalId = setInterval(updateCountdown, 1000);
+    }
+
     manualStartBtn.onclick = () => {
       playSchedule();
     };
 
-    // Uruchamiamy automatyczny start po załadowaniu
     window.onload = () => {
       scheduleAutoStart();
     };
