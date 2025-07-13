@@ -55,15 +55,14 @@
 
   <script>
     const SCHEDULE = [
-      { time: 0,  audio: "1.mp3", label: "Start: Ocytko Taras", showToPassenger: true },
-      { time: 17, audio: "2.mp3", label: "Przystanek: Ocytko Wyjazd", showToPassenger: true },
-      { time: 24, audio: "1.mp3", label: "Zapowiedź: Ocytko Szopa", showToPassenger: false },
-      { time: 28, audio: "3.mp3", label: "Przystanek: Ocytko Szopa", showToPassenger: true },
-      { time: 36, audio: "1.mp3", label: "Zapowiedź: Ocytko Garaż", showToPassenger: false },
-      { time: 40, audio: "4.mp3", label: "Przystanek: Ocytko Garaż", showToPassenger: true },
-      { time: 47, audio: "1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)", showToPassenger: false }
+      { time: 0,  audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Start: Ocytko Taras", showToPassenger: true },
+      { time: 17, audio: "https://sparklyfrog2060.github.io/Autobus/2.mp3", label: "Przystanek: Ocytko Wyjazd", showToPassenger: true },
+      { time: 24, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Szopa", showToPassenger: false },
+      { time: 28, audio: "https://sparklyfrog2060.github.io/Autobus/3.mp3", label: "Przystanek: Ocytko Szopa", showToPassenger: true },
+      { time: 36, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Garaż", showToPassenger: false },
+      { time: 40, audio: "https://sparklyfrog2060.github.io/Autobus/4.mp3", label: "Przystanek: Ocytko Garaż", showToPassenger: true },
+      { time: 47, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)", showToPassenger: false }
     ];
-    const AUDIO_PATH = "https://sparklyfrog2060.github.io/Autobus/";
 
     const logBox = document.getElementById("log");
     const manualStartBtn = document.getElementById("manualStartBtn");
@@ -105,7 +104,7 @@
 
       SCHEDULE.forEach(event => {
         setTimeout(() => {
-          playSound(AUDIO_PATH + event.audio);
+          playSound(event.audio);
           log("▶️ " + event.label);
 
           localStorage.setItem("currentStop", JSON.stringify({
@@ -128,7 +127,6 @@
     function getNextStartDelay() {
       const now = new Date();
       const minutes = now.getMinutes();
-      const seconds = now.getSeconds();
       const remainder = minutes % 2;
       const nextMinute = minutes + (2 - remainder);
       const nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinute, 0, 0);
