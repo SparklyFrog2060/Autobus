@@ -75,16 +75,25 @@
   let started = false;
   let countdownInterval = null;
   let autoStartTimeout = null;
-
-  // Ultra cichy dźwięk (prawie cisza) w loopie dla odblokowania autoplay
-  let silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAAAAA=');
-  silentAudio.loop = true;
-  silentAudio.volume = 0.01;
+  let audioContext = null;
 
   function log(text) {
     const time = new Date().toLocaleTimeString();
     logDiv.innerHTML += `[${time}] ${text}<br>`;
     logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  // Odblokowanie dźwięków za pomocą AudioContext (działa na iPhonie)
+  async function unlockAudio() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = audioContext.createBuffer(1, 1, 22050);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+      log("🔓 AudioContext odblokowany");
+    }
   }
 
   async function playAudio(src) {
@@ -97,82 +106,4 @@
         resolve();
       };
       audio.play().catch(e => {
-        log("⚠️ Odtwarzanie zablokowane (wymaga interakcji)");
-        resolve();
-      });
-    });
-  }
-
-  async function runSchedule() {
-    if (started) {
-      log("⏰ Trasa już jest uruchomiona");
-      return;
-    }
-    started = true;
-    startBtn.disabled = true;
-    log("🔔 Rozpoczynam trasę");
-
-    for (let i = 0; i < schedule.length; i++) {
-      const item = schedule[i];
-      const waitTime = i === 0 ? item.time * 1000 : (item.time - schedule[i-1].time) * 1000;
-      await new Promise(r => setTimeout(r, waitTime));
-      log("▶️ " + item.label);
-      await playAudio(item.audio);
-    }
-
-    log("✅ Trasa zakończona");
-    started = false;
-    startBtn.disabled = false;
-
-    scheduleAutoStart();
-  }
-
-  function getNextStartDelay() {
-    const now = new Date();
-    const minutes = now.getMinutes();
-    const remainder = minutes % 2;
-    const nextMinutes = remainder === 0 ? minutes : minutes + (2 - remainder);
-    let nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinutes, 0, 0);
-    if (nextStart <= now) {
-      nextStart = new Date(nextStart.getTime() + 2 * 60 * 1000);
-    }
-    return nextStart - now;
-  }
-
-  function updateCountdown() {
-    const delay = getNextStartDelay();
-    countdownEl.textContent = `⏳ Start trasy za: ${Math.floor(delay / 1000)} s`;
-  }
-
-  function scheduleAutoStart() {
-    if (autoStartTimeout) clearTimeout(autoStartTimeout);
-    if (countdownInterval) clearInterval(countdownInterval);
-
-    const delay = getNextStartDelay();
-    updateCountdown();
-
-    autoStartTimeout = setTimeout(() => {
-      runSchedule();
-      countdownInterval = setInterval(updateCountdown, 1000);
-    }, delay);
-
-    countdownInterval = setInterval(updateCountdown, 1000);
-  }
-
-  startBtn.onclick = async () => {
-    try {
-      await silentAudio.play();
-      log("🔊 Cichy dźwięk w tle odtwarzany, autoplay odblokowany");
-    } catch (e) {
-      log("⚠️ Problem z odtwarzaniem cichego dźwięku");
-    }
-    runSchedule();
-  };
-
-  window.onload = () => {
-    scheduleAutoStart();
-  };
-</script>
-
-</body>
-</html>
+        log("⚠️ Odtwarzanie zablokowane
