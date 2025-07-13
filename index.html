@@ -1,109 +1,156 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Kierowca - Linia O1</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 600px;
-    margin: 20px auto;
-    padding: 10px;
-    background: #eef2f7;
-  }
-  h1, h2 {
-    text-align: center;
-    color: #222;
-  }
-  #countdown {
-    font-size: 24px;
-    margin: 10px 0 20px 0;
-    text-align: center;
-  }
-  button {
-    display: block;
-    width: 100%;
-    padding: 15px;
-    font-size: 18px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-bottom: 20px;
-  }
-  button:disabled {
-    background: #999;
-    cursor: not-allowed;
-  }
-  #log {
-    background: white;
-    height: 250px;
-    overflow-y: auto;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 0 6px rgba(0,0,0,0.1);
-    font-size: 14px;
-    color: #333;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Przystanki - Timer Audio</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+      background: #f0f2f5;
+    }
+    h2 {
+      text-align: center;
+    }
+    input, button {
+      margin: 5px 0;
+      width: 100%;
+      padding: 8px;
+      font-size: 16px;
+    }
+    .sound-item {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+    .sound-controls {
+      margin-top: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .sound-controls button,
+    .sound-controls input[type="range"] {
+      flex: 1;
+    }
+  </style>
 </head>
 <body>
+  <h2>Dodaj dźwięk z timerem</h2>
+  <input type="file" accept="audio/*" id="audioFile">
+  <input type="number" id="audioTime" placeholder="Czas w sekundach">
+  <button onclick="addSound()">➕ Dodaj</button>
+  <button onclick="startAll()">▶️ Włącz wszystkie</button>
+  <button onclick="stopAll()">⏸️ Zatrzymaj wszystkie</button>
+  <div class="sound-controls">
+    <button onclick="addTimeToAll(5)">+5s do wszystkich</button>
+    <button onclick="addTimeToAll(10)">+10s</button>
+    <button onclick="addTimeToAll(30)">+30s</button>
+  </div>
+  <div id="soundList"></div>
 
-<h1>Linia O1 - Sterowanie trasą</h1>
-<h2 id="countdown">Ładowanie...</h2>
-<button id="startBtn">▶️ Uruchom trasę ręcznie</button>
+  <script>
+    const sounds = [];
+    let running = false;
 
-<div id="log"></div>
+    function addSound() {
+      const fileInput = document.getElementById('audioFile');
+      const timeInput = document.getElementById('audioTime');
 
-<script>
-  const schedule = [
-    { time: 0, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Start: Ocytko Taras" },
-    { time: 17, audio: "https://sparklyfrog2060.github.io/Autobus/2.mp3", label: "Przystanek: Ocytko Wyjazd" },
-    { time: 24, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Szopa" },
-    { time: 28, audio: "https://sparklyfrog2060.github.io/Autobus/3.mp3", label: "Przystanek: Ocytko Szopa" },
-    { time: 36, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Garaż" },
-    { time: 40, audio: "https://sparklyfrog2060.github.io/Autobus/4.mp3", label: "Przystanek: Ocytko Garaż" },
-    { time: 47, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)" }
-  ];
+      if (!fileInput.files[0] || !timeInput.value) {
+        alert('Wybierz plik i czas');
+        return;
+      }
 
-  const logDiv = document.getElementById("log");
-  const countdownEl = document.getElementById("countdown");
-  const startBtn = document.getElementById("startBtn");
+      const file = URL.createObjectURL(fileInput.files[0]);
+      const time = parseInt(timeInput.value);
+      const audio = new Audio(file);
 
-  let started = false;
-  let countdownInterval = null;
-  let autoStartTimeout = null;
-  let audioContext = null;
-
-  function log(text) {
-    const time = new Date().toLocaleTimeString();
-    logDiv.innerHTML += `[${time}] ${text}<br>`;
-    logDiv.scrollTop = logDiv.scrollHeight;
-  }
-
-  // Odblokowanie dźwięków za pomocą AudioContext (działa na iPhonie)
-  async function unlockAudio() {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const buffer = audioContext.createBuffer(1, 1, 22050);
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.start(0);
-      log("🔓 AudioContext odblokowany");
-    }
-  }
-
-  async function playAudio(src) {
-    return new Promise((resolve) => {
-      const audio = new Audio(src);
       audio.volume = 1.0;
-      audio.onended = resolve;
-      audio.onerror = () => {
-        log("⚠️ Błąd odtwarzania dźwięku: " + src);
-        resolve();
+      audio.load();
+
+      const sound = {
+        timeLeft: time,
+        interval: time,
+        audio: audio,
+        active: true
       };
-      audio.play().catch(e => {
-        log("⚠️ Odtwarzanie zablokowane
+
+      sounds.push(sound);
+      renderSounds();
+    }
+
+    function removeSound(index) {
+      sounds.splice(index, 1);
+      renderSounds();
+    }
+
+    function changeVolume(index, value) {
+      sounds[index].audio.volume = value;
+    }
+
+    function addTime(index, seconds) {
+      sounds[index].timeLeft += seconds;
+      renderSounds();
+    }
+
+    function addTimeToAll(seconds) {
+      sounds.forEach(s => s.timeLeft += seconds);
+      renderSounds();
+    }
+
+    function renderSounds() {
+      const list = document.getElementById('soundList');
+      list.innerHTML = '';
+      sounds.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'sound-item';
+        div.innerHTML = `
+          <strong>Dźwięk ${i + 1}</strong>: za <span id="timer-${i}">${s.timeLeft}</span> s
+          <div class="sound-controls">
+            <button onclick="addTime(${i}, 5)">+5s</button>
+            <button onclick="addTime(${i}, 10)">+10s</button>
+            <button onclick="addTime(${i}, 30)">+30s</button>
+            <input type="range" min="0" max="1" step="0.01" value="${s.audio.volume}" onchange="changeVolume(${i}, this.value)">
+            <button onclick="removeSound(${i})">🗑️ Usuń</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function startAll() {
+      sounds.forEach(s => s.active = true);
+      running = true;
+    }
+
+    function stopAll() {
+      sounds.forEach(s => s.active = false);
+      running = false;
+    }
+
+    setInterval(() => {
+      if (!running) return;
+      sounds.forEach((s, i) => {
+        if (!s.active) return;
+        s.timeLeft--;
+        if (s.timeLeft <= 0) {
+          try {
+            s.audio.currentTime = 0;
+            s.audio.play();
+          } catch (e) {
+            console.log("❌ Nie udało się odtworzyć dźwięku");
+          }
+          s.timeLeft = s.interval;
+        }
+        const timerEl = document.getElementById(`timer-${i}`);
+        if (timerEl) timerEl.textContent = s.timeLeft;
+      });
+    }, 1000);
+  </script>
+</body>
+</html>
