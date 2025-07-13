@@ -1,51 +1,52 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Kierowca - Linia O1</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
-      background: #f0f2f5;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    button {
-      width: 100%;
-      padding: 15px;
-      font-size: 18px;
-      margin: 10px 0;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:disabled {
-      background-color: #999;
-      cursor: not-allowed;
-    }
-    .event-log {
-      margin-top: 20px;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      height: 250px;
-      overflow-y: auto;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-      font-size: 15px;
-    }
-    #countdown {
-      font-size: 22px;
-      margin-bottom: 10px;
-      text-align: center;
-      color: #333;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kierowca - Linia O1</title>
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 20px;
+    max-width: 600px;
+    margin: auto;
+    background: #f0f2f5;
+  }
+  h1, h2 {
+    text-align: center;
+  }
+  button {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    margin: 10px 0;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:disabled {
+    background-color: #999;
+    cursor: not-allowed;
+  }
+  .event-log {
+    margin-top: 20px;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    font-size: 15px;
+  }
+  #countdown {
+    font-size: 22px;
+    margin-bottom: 10px;
+    text-align: center;
+    color: #333;
+  }
+</style>
 </head>
 <body>
   <h1>Linia O1 – Sterowanie trasą</h1>
@@ -53,118 +54,106 @@
   <button id="manualStartBtn">▶️ Uruchom trasę ręcznie</button>
   <div class="event-log" id="log"></div>
 
-  <script>
-    const SCHEDULE = [
-      { time: 0,  audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Start: Ocytko Taras", showToPassenger: true },
-      { time: 17, audio: "https://sparklyfrog2060.github.io/Autobus/2.mp3", label: "Przystanek: Ocytko Wyjazd", showToPassenger: true },
-      { time: 24, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Szopa", showToPassenger: false },
-      { time: 28, audio: "https://sparklyfrog2060.github.io/Autobus/3.mp3", label: "Przystanek: Ocytko Szopa", showToPassenger: true },
-      { time: 36, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Garaż", showToPassenger: false },
-      { time: 40, audio: "https://sparklyfrog2060.github.io/Autobus/4.mp3", label: "Przystanek: Ocytko Garaż", showToPassenger: true },
-      { time: 47, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)", showToPassenger: false }
-    ];
+<script>
+  const SCHEDULE = [
+    { time: 0,  audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Start: Ocytko Taras" },
+    { time: 17, audio: "https://sparklyfrog2060.github.io/Autobus/2.mp3", label: "Przystanek: Ocytko Wyjazd" },
+    { time: 24, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Szopa" },
+    { time: 28, audio: "https://sparklyfrog2060.github.io/Autobus/3.mp3", label: "Przystanek: Ocytko Szopa" },
+    { time: 36, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Garaż" },
+    { time: 40, audio: "https://sparklyfrog2060.github.io/Autobus/4.mp3", label: "Przystanek: Ocytko Garaż" },
+    { time: 47, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)" }
+  ];
 
-    const logBox = document.getElementById("log");
-    const manualStartBtn = document.getElementById("manualStartBtn");
-    const countdownEl = document.getElementById("countdown");
-    let started = false;
-    let intervalId = null;
-    let startTimeoutId = null;
+  const logBox = document.getElementById("log");
+  const manualStartBtn = document.getElementById("manualStartBtn");
+  const countdownEl = document.getElementById("countdown");
+  let started = false;
+  let intervalId = null;
+  let startTimeoutId = null;
 
-    const channel = new BroadcastChannel("autobus-channel");
-    channel.onmessage = (event) => {
-      if (event.data.type === "STOP_REQUEST") {
-        log("🛑 Pasażer nacisnął STOP");
-      }
-    };
+  function log(msg) {
+    const time = new Date().toLocaleTimeString();
+    logBox.innerHTML += `[${time}] ${msg}<br>`;
+    logBox.scrollTop = logBox.scrollHeight;
+  }
 
-    function log(msg) {
-      const time = new Date().toLocaleTimeString();
-      logBox.innerHTML += `[${time}] ${msg}<br>`;
-      logBox.scrollTop = logBox.scrollHeight;
+  function playSound(src) {
+    const audio = new Audio(src);
+    // Dodaj event, żeby odtworzyć i wyłapać błędy
+    audio.play().catch(e => {
+      console.warn("Błąd odtwarzania audio:", e);
+      log("⚠️ Nie udało się odtworzyć dźwięku");
+    });
+  }
+
+  function playSchedule() {
+    if (started) {
+      log("⏰ Trasa już trwa, nie można uruchomić ponownie");
+      return;
     }
+    started = true;
+    manualStartBtn.disabled = true;
+    log("🔁 Trasa rozpoczęta");
 
-    async function playSound(src) {
-      try {
-        const audio = new Audio(src);
-        await audio.play();
-      } catch (e) {
-        console.warn("Błąd odtwarzania audio:", e);
-      }
-    }
-
-    function playSchedule() {
-      if (started) {
-        log("⏰ Trasa już trwa, nie można uruchomić ponownie");
-        return;
-      }
-      started = true;
-      manualStartBtn.disabled = true;
-      log("🔁 Trasa rozpoczęta");
-
-      SCHEDULE.forEach(event => {
-        setTimeout(() => {
-          playSound(event.audio);
-          log("▶️ " + event.label);
-
-          localStorage.setItem("currentStop", JSON.stringify({
-            label: event.label,
-            time: event.time,
-            show: event.showToPassenger
-          }));
-        }, event.time * 1000);
-      });
-
-      const maxTime = Math.max(...SCHEDULE.map(e => e.time));
+    SCHEDULE.forEach(event => {
       setTimeout(() => {
-        started = false;
-        manualStartBtn.disabled = false;
-        log("✅ Trasa zakończona, czekamy na następny start");
-        scheduleAutoStart();
-      }, (maxTime + 1) * 1000);
-    }
+        playSound(event.audio);
+        log("▶️ " + event.label);
+      }, event.time * 1000);
+    });
 
-    function getNextStartDelay() {
-      const now = new Date();
-      const minutes = now.getMinutes();
-      const remainder = minutes % 2;
-      const nextMinute = minutes + (2 - remainder);
-      const nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinute, 0, 0);
-
-      let delay = nextStart - now;
-      if (delay < 0) delay += 2 * 60 * 1000;
-
-      return delay;
-    }
-
-    function updateCountdown() {
-      const delay = getNextStartDelay();
-      const secondsLeft = Math.floor(delay / 1000);
-      countdownEl.textContent = `⏳ Start trasy za: ${secondsLeft} s`;
-    }
-
-    function scheduleAutoStart() {
-      updateCountdown();
-      let delay = getNextStartDelay();
-
-      if (startTimeoutId) clearTimeout(startTimeoutId);
-      if (intervalId) clearInterval(intervalId);
-
-      startTimeoutId = setTimeout(() => {
-        playSchedule();
-        intervalId = setInterval(updateCountdown, 1000);
-      }, delay);
-
-      if (!intervalId) intervalId = setInterval(updateCountdown, 1000);
-    }
-
-    manualStartBtn.onclick = () => {
-      playSchedule();
-    };
-
-    window.onload = () => {
+    const maxTime = Math.max(...SCHEDULE.map(e => e.time));
+    setTimeout(() => {
+      started = false;
+      manualStartBtn.disabled = false;
+      log("✅ Trasa zakończona, czekamy na następny start");
       scheduleAutoStart();
-    };
-  </script>
+    }, (maxTime + 1) * 1000);
+  }
+
+  function getNextStartDelay() {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+    const remainder = minutes % 2;
+    const nextMinute = minutes + (2 - remainder);
+    const nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinute, 0, 0);
+
+    let delay = nextStart - now;
+    if (delay < 0) delay += 2 * 60 * 1000;
+
+    return delay;
+  }
+
+  function updateCountdown() {
+    const delay = getNextStartDelay();
+    const secondsLeft = Math.floor(delay / 1000);
+    countdownEl.textContent = `⏳ Start trasy za: ${secondsLeft} s`;
+  }
+
+  function scheduleAutoStart() {
+    updateCountdown();
+    let delay = getNextStartDelay();
+
+    if (startTimeoutId) clearTimeout(startTimeoutId);
+    if (intervalId) clearInterval(intervalId);
+
+    startTimeoutId = setTimeout(() => {
+      playSchedule();
+      intervalId = setInterval(updateCountdown, 1000);
+    }, delay);
+
+    if (!intervalId) intervalId = setInterval(updateCountdown, 1000);
+  }
+
+  manualStartBtn.onclick = () => {
+    playSchedule();
+  };
+
+  window.onload = () => {
+    scheduleAutoStart();
+  };
+</script>
 </body>
 </html>
