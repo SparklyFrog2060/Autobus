@@ -6,57 +6,61 @@
 <title>Kierowca - Linia O1</title>
 <style>
   body {
-    font-family: sans-serif;
-    padding: 20px;
+    font-family: Arial, sans-serif;
     max-width: 600px;
-    margin: auto;
-    background: #f0f2f5;
+    margin: 20px auto;
+    padding: 10px;
+    background: #eef2f7;
   }
   h1, h2 {
     text-align: center;
+    color: #222;
+  }
+  #countdown {
+    font-size: 24px;
+    margin: 10px 0 20px 0;
+    text-align: center;
   }
   button {
+    display: block;
     width: 100%;
     padding: 15px;
     font-size: 18px;
-    margin: 10px 0;
-    background-color: #007bff;
+    background: #007bff;
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    margin-bottom: 20px;
   }
   button:disabled {
-    background-color: #999;
+    background: #999;
     cursor: not-allowed;
   }
-  .event-log {
-    margin-top: 20px;
+  #log {
     background: white;
-    padding: 10px;
-    border-radius: 8px;
     height: 250px;
     overflow-y: auto;
-    box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    font-size: 15px;
-  }
-  #countdown {
-    font-size: 22px;
-    margin-bottom: 10px;
-    text-align: center;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    font-size: 14px;
     color: #333;
   }
 </style>
 </head>
 <body>
-  <h1>Linia O1 – Sterowanie trasą</h1>
-  <h2 id="countdown">Ładowanie...</h2>
-  <button id="manualStartBtn">▶️ Uruchom trasę ręcznie</button>
-  <div class="event-log" id="log"></div>
+
+<h1>Linia O1 - Sterowanie trasą</h1>
+<h2 id="countdown">Ładowanie...</h2>
+<button id="startBtn">▶️ Uruchom trasę ręcznie</button>
+
+<div id="log"></div>
 
 <script>
-  const SCHEDULE = [
-    { time: 0,  audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Start: Ocytko Taras" },
+  // Harmonogram z pełnymi linkami do dźwięków i opisami
+  const schedule = [
+    { time: 0, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Start: Ocytko Taras" },
     { time: 17, audio: "https://sparklyfrog2060.github.io/Autobus/2.mp3", label: "Przystanek: Ocytko Wyjazd" },
     { time: 24, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Szopa" },
     { time: 28, audio: "https://sparklyfrog2060.github.io/Autobus/3.mp3", label: "Przystanek: Ocytko Szopa" },
@@ -65,95 +69,112 @@
     { time: 47, audio: "https://sparklyfrog2060.github.io/Autobus/1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)" }
   ];
 
-  const logBox = document.getElementById("log");
-  const manualStartBtn = document.getElementById("manualStartBtn");
+  const logDiv = document.getElementById("log");
   const countdownEl = document.getElementById("countdown");
-  let started = false;
-  let intervalId = null;
-  let startTimeoutId = null;
+  const startBtn = document.getElementById("startBtn");
 
-  function log(msg) {
+  let timers = [];
+  let started = false;
+  let countdownInterval = null;
+  let autoStartTimeout = null;
+
+  function log(text) {
     const time = new Date().toLocaleTimeString();
-    logBox.innerHTML += `[${time}] ${msg}<br>`;
-    logBox.scrollTop = logBox.scrollHeight;
+    logDiv.innerHTML += `[${time}] ${text}<br>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
   }
 
-  function playSound(src) {
-    const audio = new Audio(src);
-    // Dodaj event, żeby odtworzyć i wyłapać błędy
-    audio.play().catch(e => {
-      console.warn("Błąd odtwarzania audio:", e);
-      log("⚠️ Nie udało się odtworzyć dźwięku");
+  // Odtwarza dźwięk i zwraca Promise na zakończenie odtwarzania
+  function playAudio(src) {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio(src);
+      audio.volume = 1.0;
+      audio.onended = resolve;
+      audio.onerror = () => {
+        log("⚠️ Błąd odtwarzania dźwięku: " + src);
+        resolve(); // nie blokujemy dalej
+      };
+      // Próba odtworzenia, może wymagać interakcji użytkownika
+      audio.play().catch(err => {
+        log("⚠️ Odtwarzanie zablokowane (wymaga interakcji): " + err.message);
+        resolve();
+      });
     });
   }
 
-  function playSchedule() {
+  // Uruchamia cały harmonogram - odtwarza dźwięki w zaplanowanych odstępach
+  async function runSchedule() {
     if (started) {
-      log("⏰ Trasa już trwa, nie można uruchomić ponownie");
+      log("⏰ Trasa już jest uruchomiona");
       return;
     }
     started = true;
-    manualStartBtn.disabled = true;
-    log("🔁 Trasa rozpoczęta");
+    startBtn.disabled = true;
+    log("🔔 Rozpoczynam trasę");
 
-    SCHEDULE.forEach(event => {
-      setTimeout(() => {
-        playSound(event.audio);
-        log("▶️ " + event.label);
-      }, event.time * 1000);
-    });
+    const startTime = Date.now();
 
-    const maxTime = Math.max(...SCHEDULE.map(e => e.time));
-    setTimeout(() => {
-      started = false;
-      manualStartBtn.disabled = false;
-      log("✅ Trasa zakończona, czekamy na następny start");
-      scheduleAutoStart();
-    }, (maxTime + 1) * 1000);
+    for (let i = 0; i < schedule.length; i++) {
+      const item = schedule[i];
+      const now = Date.now();
+      const waitTime = startTime + item.time * 1000 - now;
+      if (waitTime > 0) {
+        await new Promise(r => setTimeout(r, waitTime));
+      }
+      log("▶️ " + item.label);
+      await playAudio(item.audio);
+    }
+
+    log("✅ Trasa zakończona");
+    started = false;
+    startBtn.disabled = false;
+
+    scheduleAutoStart(); // zaplanuj następny start automatyczny
   }
 
+  // Oblicza opóźnienie do najbliższego czasu startu (co 2 minuty)
   function getNextStartDelay() {
     const now = new Date();
     const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
     const remainder = minutes % 2;
-    const nextMinute = minutes + (2 - remainder);
-    const nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinute, 0, 0);
-
-    let delay = nextStart - now;
-    if (delay < 0) delay += 2 * 60 * 1000;
-
-    return delay;
+    const nextMinutes = remainder === 0 ? minutes : minutes + (2 - remainder);
+    let nextStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), nextMinutes, 0, 0);
+    if (nextStart <= now) {
+      nextStart = new Date(nextStart.getTime() + 2 * 60 * 1000);
+    }
+    return nextStart - now;
   }
 
+  // Aktualizuje licznik odliczania do następnego startu
   function updateCountdown() {
     const delay = getNextStartDelay();
-    const secondsLeft = Math.floor(delay / 1000);
-    countdownEl.textContent = `⏳ Start trasy za: ${secondsLeft} s`;
+    countdownEl.textContent = `⏳ Start trasy za: ${Math.floor(delay / 1000)} s`;
   }
 
+  // Zaplanuj automatyczny start co 2 minuty
   function scheduleAutoStart() {
+    if (autoStartTimeout) clearTimeout(autoStartTimeout);
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    const delay = getNextStartDelay();
     updateCountdown();
-    let delay = getNextStartDelay();
 
-    if (startTimeoutId) clearTimeout(startTimeoutId);
-    if (intervalId) clearInterval(intervalId);
-
-    startTimeoutId = setTimeout(() => {
-      playSchedule();
-      intervalId = setInterval(updateCountdown, 1000);
+    autoStartTimeout = setTimeout(() => {
+      runSchedule();
+      countdownInterval = setInterval(updateCountdown, 1000);
     }, delay);
 
-    if (!intervalId) intervalId = setInterval(updateCountdown, 1000);
+    countdownInterval = setInterval(updateCountdown, 1000);
   }
 
-  manualStartBtn.onclick = () => {
-    playSchedule();
-  };
+  startBtn.addEventListener("click", () => {
+    runSchedule();
+  });
 
   window.onload = () => {
     scheduleAutoStart();
   };
 </script>
+
 </body>
 </html>
