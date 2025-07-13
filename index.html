@@ -57,8 +57,11 @@
     const SCHEDULE = [
       { time: 0,  audio: "1.mp3", label: "Start: Ocytko Taras", showToPassenger: true },
       { time: 17, audio: "2.mp3", label: "Przystanek: Ocytko Wyjazd", showToPassenger: true },
+      { time: 24, audio: "1.mp3", label: "Zapowiedź: Ocytko Szopa", showToPassenger: false },
       { time: 28, audio: "3.mp3", label: "Przystanek: Ocytko Szopa", showToPassenger: true },
-      { time: 40, audio: "4.mp3", label: "Przystanek: Ocytko Garaż", showToPassenger: true }
+      { time: 36, audio: "1.mp3", label: "Zapowiedź: Ocytko Garaż", showToPassenger: false },
+      { time: 40, audio: "4.mp3", label: "Przystanek: Ocytko Garaż", showToPassenger: true },
+      { time: 47, audio: "1.mp3", label: "Zapowiedź: Ocytko Taras (powrót)", showToPassenger: false }
     ];
     const AUDIO_PATH = "https://sparklyfrog2060.github.io/Autobus/";
 
@@ -81,46 +84,46 @@
       logBox.innerHTML += `[${time}] ${msg}<br>`;
       logBox.scrollTop = logBox.scrollHeight;
     }
-async function playSound(src) {
-  try {
-    const audio = new Audio(src);
-    await audio.play();
-  } catch (e) {
-    console.warn("Błąd odtwarzania audio:", e);
-  }
-}
 
-function playSchedule() {
-  if (started) {
-    log("⏰ Trasa już trwa, nie można uruchomić ponownie");
-    return;
-  }
-  started = true;
-  manualStartBtn.disabled = true;
-  log("🔁 Trasa rozpoczęta");
+    async function playSound(src) {
+      try {
+        const audio = new Audio(src);
+        await audio.play();
+      } catch (e) {
+        console.warn("Błąd odtwarzania audio:", e);
+      }
+    }
 
-  SCHEDULE.forEach(event => {
-    setTimeout(() => {
-      playSound(AUDIO_PATH + event.audio);
-      log("▶️ " + event.label);
+    function playSchedule() {
+      if (started) {
+        log("⏰ Trasa już trwa, nie można uruchomić ponownie");
+        return;
+      }
+      started = true;
+      manualStartBtn.disabled = true;
+      log("🔁 Trasa rozpoczęta");
 
-      localStorage.setItem("currentStop", JSON.stringify({
-        label: event.label,
-        time: event.time,
-        show: event.showToPassenger
-      }));
-    }, event.time * 1000);
-  });
+      SCHEDULE.forEach(event => {
+        setTimeout(() => {
+          playSound(AUDIO_PATH + event.audio);
+          log("▶️ " + event.label);
 
-  const maxTime = Math.max(...SCHEDULE.map(e => e.time));
-  setTimeout(() => {
-    started = false;
-    manualStartBtn.disabled = false;
-    log("✅ Trasa zakończona, czekamy na następny start");
-    scheduleAutoStart();
-  }, (maxTime + 1) * 1000);
-}
+          localStorage.setItem("currentStop", JSON.stringify({
+            label: event.label,
+            time: event.time,
+            show: event.showToPassenger
+          }));
+        }, event.time * 1000);
+      });
 
+      const maxTime = Math.max(...SCHEDULE.map(e => e.time));
+      setTimeout(() => {
+        started = false;
+        manualStartBtn.disabled = false;
+        log("✅ Trasa zakończona, czekamy na następny start");
+        scheduleAutoStart();
+      }, (maxTime + 1) * 1000);
+    }
 
     function getNextStartDelay() {
       const now = new Date();
@@ -137,7 +140,6 @@ function playSchedule() {
     }
 
     function updateCountdown() {
-      const now = new Date();
       const delay = getNextStartDelay();
       const secondsLeft = Math.floor(delay / 1000);
       countdownEl.textContent = `⏳ Start trasy za: ${secondsLeft} s`;
@@ -152,11 +154,9 @@ function playSchedule() {
 
       startTimeoutId = setTimeout(() => {
         playSchedule();
-        // Odliczanie co sekundę
         intervalId = setInterval(updateCountdown, 1000);
       }, delay);
 
-      // Odliczaj co sekundę countdown od teraz do startu
       if (!intervalId) intervalId = setInterval(updateCountdown, 1000);
     }
 
