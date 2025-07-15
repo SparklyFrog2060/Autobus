@@ -2,138 +2,112 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>Przystanki - Timer Audio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Autobusowy Symulator</title>
   <style>
     body {
+      margin: 0;
       font-family: sans-serif;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
-    }
-    input, button {
-      margin: 5px 0;
-      width: 100%;
-      padding: 8px;
-    }
-    .sound-item {
-      margin: 10px 0;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    .sound-controls {
-      margin-top: 5px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      background: #f0f0f0;
     }
-    .sound-controls button,
-    .sound-controls input[type="range"] {
-      flex: 1;
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    #next {
+      font-size: 1.5rem;
     }
   </style>
 </head>
 <body>
-  <h2>Dodaj dźwięk z timerem</h2>
-  <input type="file" accept="*/*" id="audioFile">
-  <input type="number" id="audioTime" placeholder="Czas w sekundach">
-  <button onclick="addSound()">Dodaj</button>
-  <button onclick="startAll()">▶️ Włącz wszystkie</button>
-  <button onclick="stopAll()">⏸️ Zatrzymaj wszystkie</button>
-  <div class="sound-controls">
-    <button onclick="addTimeToAll(5)">+5s do wszystkich</button>
-    <button onclick="addTimeToAll(10)">+10s do wszystkich</button>
-    <button onclick="addTimeToAll(30)">+30s do wszystkich</button>
-  </div>
-  <div id="soundList"></div>
+  <h1>Symulator Przystanków</h1>
+  <div id="status">Czekam na rozpoczęcie trasy...</div>
+  <div id="next"></div>
 
   <script>
-    const sounds = [];
-    let running = false;
+    const przystanki = [
+      { czas: 0, nazwa: "Ocytko Taras (start)" },
+      { czas: 17, nazwa: "Ocytko Wyjazd" },
+      { czas: 28, nazwa: "Ocytko Szopa" },
+      { czas: 40, nazwa: "Ocytko Garaż" },
+      { czas: 47, nazwa: "Ocytko Taras (koniec)" }
+    ];
 
-    function addSound() {
-      const fileInput = document.getElementById('audioFile');
-      const timeInput = document.getElementById('audioTime');
+    let trasaInterval = null;
+    let startCzas = null;
+    const statusDiv = document.getElementById("status");
+    const nextDiv = document.getElementById("next");
 
-      if (!fileInput.files[0] || !timeInput.value) return alert('Wybierz plik i czas');
-
-      const file = URL.createObjectURL(fileInput.files[0]);
-      const time = parseInt(timeInput.value);
-      const audio = new Audio(file);
-
-      const sound = {
-        timeLeft: time,
-        interval: time,
-        audio: audio,
-        active: true
-      };
-
-      sounds.push(sound);
-      renderSounds();
+    function say(text) {
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = "pl-PL";
+      window.speechSynthesis.speak(msg);
     }
 
-    function removeSound(index) {
-      sounds.splice(index, 1);
-      renderSounds();
+    function znajdzNajblizszyStart() {
+      const teraz = new Date();
+      const sekundy = teraz.getSeconds();
+      const minuty = teraz.getMinutes();
+      const terazCzas = teraz.getTime();
+
+      // Znajdź czas następnej parzystej minuty
+      const dodajMinuty = (minuty % 2 === 0 && sekundy < 60) ? 0 : (2 - minuty % 2);
+      const start = new Date(teraz.getFullYear(), teraz.getMonth(), teraz.getDate(), teraz.getHours(), minuty + dodajMinuty, 34, 0);
+      return start.getTime();
     }
 
-    function changeVolume(index, value) {
-      sounds[index].audio.volume = value;
-    }
+    function startTrasa() {
+      startCzas = Date.now();
+      statusDiv.innerText = "Trasa rozpoczęta!";
+      let przystanekIndex = 0;
 
-    function addTime(index, seconds) {
-      sounds[index].timeLeft += seconds;
-      renderSounds();
-    }
+      function update() {
+        const teraz = Date.now();
+        const uplynelo = Math.floor((teraz - startCzas) / 1000);
 
-    function addTimeToAll(seconds) {
-      sounds.forEach(s => s.timeLeft += seconds);
-      renderSounds();
-    }
+        if (przystanekIndex < przystanki.length) {
+          const p = przystanki[przystanekIndex];
+          const doPrzystanku = p.czas - uplynelo;
 
-    function renderSounds() {
-      const list = document.getElementById('soundList');
-      list.innerHTML = '';
-      sounds.forEach((s, i) => {
-        const div = document.createElement('div');
-        div.className = 'sound-item';
-        div.innerHTML = `
-          <strong>Dźwięk ${i + 1}</strong>: za <span id="timer-${i}">${s.timeLeft}</span> s
-          <div class="sound-controls">
-            <button onclick="addTime(${i}, 5)">+5s</button>
-            <button onclick="addTime(${i}, 10)">+10s</button>
-            <button onclick="addTime(${i}, 30)">+30s</button>
-            <input type="range" min="0" max="1" step="0.01" value="${s.audio.volume}" onchange="changeVolume(${i}, this.value)">
-            <button onclick="removeSound(${i})">Usuń</button>
-          </div>
-        `;
-        list.appendChild(div);
-      });
-    }
-
-    function startAll() {
-      sounds.forEach(s => s.active = true);
-      running = true;
-    }
-
-    function stopAll() {
-      sounds.forEach(s => s.active = false);
-      running = false;
-    }
-
-    setInterval(() => {
-      if (!running) return;
-      sounds.forEach((s, i) => {
-        if (!s.active) return;
-        s.timeLeft--;
-        if (s.timeLeft <= 0) {
-          s.audio.play();
-          s.timeLeft = s.interval;
+          if (doPrzystanku <= 0) {
+            statusDiv.innerText = `Przystanek: ${p.nazwa}`;
+            say(p.nazwa);
+            przystanekIndex++;
+          } else {
+            nextDiv.innerText = `Za ${doPrzystanku}s: ${p.nazwa}`;
+          }
+        } else {
+          statusDiv.innerText = "Koniec trasy.";
+          nextDiv.innerText = "";
+          clearInterval(trasaInterval);
+          zaplanujKolejnaTrase();
         }
-        const timerEl = document.getElementById(`timer-${i}`);
-        if (timerEl) timerEl.textContent = s.timeLeft;
-      });
-    }, 1000);
+      }
+
+      trasaInterval = setInterval(update, 500);
+    }
+
+    function zaplanujKolejnaTrase() {
+      const nastepny = znajdzNajblizszyStart();
+      const doStartu = Math.max(0, nastepny - Date.now());
+
+      const sekundyDoStartu = Math.floor(doStartu / 1000);
+      statusDiv.innerText = `Czekam na start (${sekundyDoStartu}s)...`;
+      nextDiv.innerText = "";
+
+      setTimeout(() => {
+        startTrasa();
+      }, doStartu);
+    }
+
+    // Start
+    zaplanujKolejnaTrase();
   </script>
 </body>
 </html>
