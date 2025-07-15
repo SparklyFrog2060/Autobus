@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Autobusowy Symulator</title>
+  <title>Symulator Autobusu</title>
   <style>
     body {
       margin: 0;
@@ -39,75 +39,79 @@
       { czas: 47, nazwa: "Ocytko Taras (koniec)" }
     ];
 
-    let trasaInterval = null;
-    let startCzas = null;
     const statusDiv = document.getElementById("status");
     const nextDiv = document.getElementById("next");
 
+    let startCzas = null;
+    let tryb = "czekanie";
+    let przystanekIndex = 0;
+
     function say(text) {
-      const msg = new SpeechSynthesisUtterance(text);
+      const msg = new SpeechSynthesisUtterance("Następny przystanek: " + text);
       msg.lang = "pl-PL";
+      msg.rate = 0.8; // wolniejsze mówienie
       window.speechSynthesis.speak(msg);
     }
 
     function znajdzNajblizszyStart() {
       const teraz = new Date();
-      const sekundy = teraz.getSeconds();
-      const minuty = teraz.getMinutes();
-      const terazCzas = teraz.getTime();
-
-      // Znajdź czas następnej parzystej minuty
-      const dodajMinuty = (minuty % 2 === 0 && sekundy < 60) ? 0 : (2 - minuty % 2);
-      const start = new Date(teraz.getFullYear(), teraz.getMonth(), teraz.getDate(), teraz.getHours(), minuty + dodajMinuty, 34, 0);
-      return start.getTime();
+      const min = teraz.getMinutes();
+      const sek = teraz.getSeconds();
+      const dodajMinuty = (min % 2 === 0 && sek < 60) ? 0 : (2 - min % 2);
+      return new Date(
+        teraz.getFullYear(),
+        teraz.getMonth(),
+        teraz.getDate(),
+        teraz.getHours(),
+        min + dodajMinuty,
+        34,
+        0
+      ).getTime();
     }
 
-    function startTrasa() {
-      startCzas = Date.now();
-      statusDiv.innerText = "Trasa rozpoczęta!";
-      let przystanekIndex = 0;
+    function aktualizuj() {
+      const teraz = Date.now();
 
-      function update() {
-        const teraz = Date.now();
+      if (tryb === "czekanie") {
+        const czasStartu = znajdzNajblizszyStart();
+        const doStartu = Math.floor((czasStartu - teraz) / 1000);
+
+        if (doStartu <= 0) {
+          tryb = "trasa";
+          startCzas = Date.now();
+          przystanekIndex = 0;
+          say(przystanki[0].nazwa);
+          statusDiv.innerText = "Przystanek: " + przystanki[0].nazwa;
+        } else {
+          statusDiv.innerText = `Czekam na start (${doStartu}s)...`;
+          nextDiv.innerText = "";
+        }
+
+      } else if (tryb === "trasa") {
         const uplynelo = Math.floor((teraz - startCzas) / 1000);
 
-        if (przystanekIndex < przystanki.length) {
-          const p = przystanki[przystanekIndex];
-          const doPrzystanku = p.czas - uplynelo;
+        if (przystanekIndex + 1 < przystanki.length) {
+          const kolejny = przystanki[przystanekIndex + 1];
+          const doNastepnego = kolejny.czas - uplynelo;
 
-          if (doPrzystanku <= 0) {
-            statusDiv.innerText = `Przystanek: ${p.nazwa}`;
-            say(p.nazwa);
+          if (doNastepnego === 0) {
             przystanekIndex++;
-          } else {
-            nextDiv.innerText = `Za ${doPrzystanku}s: ${p.nazwa}`;
+            say(kolejny.nazwa);
+            statusDiv.innerText = "Przystanek: " + kolejny.nazwa;
+            nextDiv.innerText = "";
+          } else if (doNastepnego > 0) {
+            nextDiv.innerText = `Za ${doNastepnego}s: ${kolejny.nazwa}`;
           }
+
         } else {
           statusDiv.innerText = "Koniec trasy.";
           nextDiv.innerText = "";
-          clearInterval(trasaInterval);
-          zaplanujKolejnaTrase();
+          tryb = "czekanie";
         }
       }
-
-      trasaInterval = setInterval(update, 500);
     }
 
-    function zaplanujKolejnaTrase() {
-      const nastepny = znajdzNajblizszyStart();
-      const doStartu = Math.max(0, nastepny - Date.now());
-
-      const sekundyDoStartu = Math.floor(doStartu / 1000);
-      statusDiv.innerText = `Czekam na start (${sekundyDoStartu}s)...`;
-      nextDiv.innerText = "";
-
-      setTimeout(() => {
-        startTrasa();
-      }, doStartu);
-    }
-
-    // Start
-    zaplanujKolejnaTrase();
+    setInterval(aktualizuj, 1000);
   </script>
 </body>
 </html>
