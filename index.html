@@ -34,7 +34,7 @@
 
   <script>
     const przystanki = [
-      { czas: 0, nazwa: "Ocytko Taras (start)" },
+      { czas: 0, nazwa: "Ocytko Taras (Początek Trasy)" },
       { czas: 15, nazwa: "Następny przystanek: Ocytko Wyjazd. Na żądanie" },
       { czas: 20, nazwa: "Linia o jeden. Ocytko Wyjazd" },
       { czas: 27, nazwa: "Następny przystanek: Ocytko Szopa. Na żądanie" },
@@ -58,7 +58,7 @@
       if (!dziala) return;
       const msg = new SpeechSynthesisUtterance(text);
       msg.lang = "pl-PL";
-      msg.rate = 1.1;
+      msg.rate = 0.9;
       window.speechSynthesis.speak(msg);
     }
 
