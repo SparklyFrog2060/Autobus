@@ -59,27 +59,26 @@
       msg.rate = 0.9;
       window.speechSynthesis.speak(msg);
     }
-function znajdzNajblizszyStart() {
+
+    function znajdzNajblizszyStart() {
   const teraz = new Date();
-  let h = teraz.getHours();
   let m = teraz.getMinutes();
   const s = teraz.getSeconds();
 
-  // Znajdź najbliższy moment z parzystą godziną i minutą
-  while ((h % 2 !== 0) || (m % 2 !== 0)) {
-    m += 1;
-    if (m >= 60) {
-      m = 0;
-      h += 1;
-      if (h >= 24) h = 0;
-    }
+  // Jeśli minuta jest nieparzysta lub minęło już 60 sekund w parzystej – przesuń do kolejnej parzystej
+  if (m % 2 !== 0 || s >= 60) m += 1;
+  if (m % 2 !== 0) m += 1;
+  if (m >= 60) {
+    teraz.setHours(teraz.getHours() + 1);
+    m = 0;
   }
 
   return new Date(
     teraz.getFullYear(), teraz.getMonth(), teraz.getDate(),
-    h, m, 0, 0
+    teraz.getHours(), m, 0, 0
   ).getTime();
 }
+
 
 
     function aktualizuj() {
