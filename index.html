@@ -27,17 +27,18 @@
   </style>
 </head>
 <body>
-  <h1>Symulator Przystanków</h1>
-  <div id="status">Kliknij „Start”, aby włączyć głos</div>
+  <h1>Ocytko Bus</h1>
+  <div id="status">Kliknij „Start”, aby uruchomić pojazd</div>
   <div id="next"></div>
   <button id="startBtn">Start</button>
 
   <script>
     const przystanki = [
       { czas: 0, nazwa: "Ocytko Taras (start)" },
-      { czas: 17, nazwa: "Ocytko Wyjazd" },
-      { czas: 28, nazwa: "Ocytko Szopa" },
-      { czas: 40, nazwa: "Ocytko Garaż" },
+      { czas: 15, nazwa: "Następny przystanek: Ocytko Wyjazd. Na żądanie" },
+      { czas: 20, nazwa: "Linia o jeden Ocytko Wyjazd" },
+      { czas: 28, nazwa: "Następny przystanek: Ocytko Szopa. Na żądanie" },
+      { czas: 40, nazwa: "Następny przystanek: Ocytko Garaż. Na żądanie" },
       { czas: 47, nazwa: "Ocytko Taras (koniec)" }
     ];
 
@@ -52,7 +53,7 @@
 
     function say(text) {
       if (!dziala) return;
-      const msg = new SpeechSynthesisUtterance("Następny przystanek: " + text);
+      const msg = new SpeechSynthesisUtterance(text);
       msg.lang = "pl-PL";
       msg.rate = 0.8;
       window.speechSynthesis.speak(msg);
