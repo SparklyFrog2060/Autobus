@@ -16,19 +16,21 @@
       text-align: center;
       background: #f0f0f0;
     }
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-    #next {
-      font-size: 1.5rem;
+    h1 { font-size: 2rem; margin-bottom: 1rem; }
+    #next { font-size: 1.5rem; }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      margin-top: 2rem;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <h1>Symulator Przystanków</h1>
-  <div id="status">Czekam na rozpoczęcie trasy...</div>
+  <div id="status">Kliknij „Start”, aby włączyć głos</div>
   <div id="next"></div>
+  <button id="startBtn">Start</button>
 
   <script>
     const przystanki = [
@@ -41,15 +43,18 @@
 
     const statusDiv = document.getElementById("status");
     const nextDiv = document.getElementById("next");
+    const startBtn = document.getElementById("startBtn");
 
     let startCzas = null;
     let tryb = "czekanie";
     let przystanekIndex = 0;
+    let dziala = false;
 
     function say(text) {
+      if (!dziala) return;
       const msg = new SpeechSynthesisUtterance("Następny przystanek: " + text);
       msg.lang = "pl-PL";
-      msg.rate = 0.8; // wolniejsze mówienie
+      msg.rate = 0.8;
       window.speechSynthesis.speak(msg);
     }
 
@@ -70,6 +75,8 @@
     }
 
     function aktualizuj() {
+      if (!dziala) return;
+
       const teraz = Date.now();
 
       if (tryb === "czekanie") {
@@ -110,6 +117,12 @@
         }
       }
     }
+
+    startBtn.addEventListener("click", () => {
+      dziala = true;
+      startBtn.style.display = "none";
+      say("Symulator przystanków uruchomiony.");
+    });
 
     setInterval(aktualizuj, 1000);
   </script>
