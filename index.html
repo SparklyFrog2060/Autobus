@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Symulator Autobusu</title>
+  <title>OcytkoBus</title>
   <style>
     body {
       margin: 0;
@@ -36,10 +36,11 @@
     const przystanki = [
       { czas: 0, nazwa: "Ocytko Taras (start)" },
       { czas: 15, nazwa: "Następny przystanek: Ocytko Wyjazd. Na żądanie" },
-      { czas: 20, nazwa: "Linia o jeden Ocytko Wyjazd" },
+      { czas: 20, nazwa: "Linia o jeden. Ocytko Wyjazd" },
       { czas: 27, nazwa: "Następny przystanek: Ocytko Szopa. Na żądanie" },
-      { czas: 31, nazwa: "Linia o jeden Ocytko Szopa" },
+      { czas: 31, nazwa: "Linia o jeden. Ocytko Szopa" },
       { czas: 40, nazwa: "Następny przystanek: Ocytko Garaż. Na żądanie" },
+      { czas: 42, nazwa: "Linia o jeden. Ocytko Garaż" },
       { czas: 47, nazwa: "Ocytko Taras (koniec)" }
     ];
 
@@ -56,7 +57,7 @@
       if (!dziala) return;
       const msg = new SpeechSynthesisUtterance(text);
       msg.lang = "pl-PL";
-      msg.rate = 0.8;
+      msg.rate = 1.4;
       window.speechSynthesis.speak(msg);
     }
 
