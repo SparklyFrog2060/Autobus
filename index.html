@@ -72,6 +72,19 @@
     teraz.setHours(teraz.getHours() + 1);
     m = 0;
   }
+// Cichy dźwięk w tle - data URI mały WAV (prawie niesłyszalny)
+const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');
+silentAudio.loop = true;
+silentAudio.volume = 0.01;
+
+startBtn.addEventListener('click', () => {
+  // Uruchamiamy cichy dźwięk, żeby wymusić audio przez Bluetooth
+  silentAudio.play().catch(() => {});
+  
+  dziala = true;
+  startBtn.style.display = 'none';
+  say("Pojazd Uruchomiony");
+});
 
   return new Date(
     teraz.getFullYear(), teraz.getMonth(), teraz.getDate(),
