@@ -132,6 +132,40 @@
     });
 
     setInterval(aktualizuj, 1000);
+
+    async function initAudioOutputSelector() {
+  const select = document.getElementById('audioOutputSelect');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    select.style.display = 'none';
+    return;
+  }
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+
+  audioOutputs.forEach(device => {
+    const option = document.createElement('option');
+    option.value = device.deviceId;
+    option.text = device.label || `Głośnik ${select.length + 1}`;
+    select.appendChild(option);
+  });
+
+  select.addEventListener('change', () => {
+    const deviceId = select.value;
+    const utterance = new SpeechSynthesisUtterance('');
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.speak && 'setSinkId' in Audio.prototype) {
+      const audio = new Audio();
+      audio.setSinkId(deviceId).then(() => {
+        // Można by tu przypisać `audio` do wszystkich future dźwięków
+      }).catch(console.error);
+    }
+  });
+}
+
+initAudioOutputSelector();
+
   </script>
+<select id="audioOutputSelect"></select>
+
 </body>
 </html>
