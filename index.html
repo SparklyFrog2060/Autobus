@@ -31,6 +31,7 @@
   <div id="status">Kliknij „Start”, aby uruchomić pojazd</div>
   <div id="next"></div>
   <button id="startBtn">Start</button>
+  <button id="manualStartBtn">Start ręczny trasy</button>
   <iframe src="https://sparklyfrog2060.github.io/Autobus-mapa/" style="width:450px;height:450px;border:none;"></iframe>
 
   <script>
@@ -51,7 +52,18 @@
     let tryb = "czekanie";
     let przystanekIndex = 0;
     let dziala = false;
+document.getElementById("manualStartBtn").addEventListener("click", () => {
+  dziala = true;
+  tryb = "trasa";
+  startCzas = Date.now();
+  przystanekIndex = 0;
+  say(przystanki[0].nazwa);
+  statusDiv.innerText = "Przystanek: " + przystanki[0].nazwa;
+  startBtn.style.display = "none";
+  manualStartBtn.style.display = "none";
+});
 
+    
     function say(text) {
       if (!dziala) return;
       const msg = new SpeechSynthesisUtterance(text);
